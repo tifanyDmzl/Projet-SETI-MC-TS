@@ -47,3 +47,6 @@ nber_of_rollout_iterations = 2000
 
 #Pour moi infinie...
 simulation_depth = 4 #Profondeur de simulation : on simule les 4 prochains capteurs afin de calculer la distance totale qui sera parcourue ! 
+
+
+#Test GitHub !! 
