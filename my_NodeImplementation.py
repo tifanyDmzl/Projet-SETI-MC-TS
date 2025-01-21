@@ -5,7 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from config import *
 #from sim_control import *
-from simcontrolV4 import *
+from simcontrolV5 import *
 
 
 class Node(Node):
@@ -30,6 +30,7 @@ class Node(Node):
             self.accumulated_cost_mode_HI = 0 
         else :
             dist_from_parent_to_current_node = calculate_distance(points[self.parent.sensor],points[self.sensor])
+            print("Tif_dist",dist_from_parent_to_current_node)
             self.accumulated_cost_mode_LO = self.parent.accumulated_cost_mode_LO + coef_energy_no_wind*dist_from_parent_to_current_node
             
             if (points[self.sensor]["c"] == True):
@@ -40,9 +41,9 @@ class Node(Node):
                     if (node.accumulated_cost_mode_HI > worst_accumulated_cost):
                         worst_accumulated_cost = node.accumulated_cost_mode_HI
 
-                self.accumulated_cost_mode_HI = worst_accumulated_cost + wind_factor*coef_energy_no_wind*dist_from_parent_to_current_node
+                self.accumulated_cost_mode_HI = worst_accumulated_cost + coef_energy_wind*dist_from_parent_to_current_node
             else : 
-                self.accumulated_cost_mode_HI = self.parent.accumulated_cost_mode_LO + wind_factor*coef_energy_no_wind*dist_from_parent_to_current_node
+                self.accumulated_cost_mode_HI = self.parent.accumulated_cost_mode_LO + coef_energy_wind*dist_from_parent_to_current_node
 
         print("accumulated_cost_mode_HI",self.id, " : ",self.sensor, " : ",self.accumulated_cost_mode_HI)
         print("accumulated_cost_mode_LO",self.id, " : ",self.sensor, " : ",self.accumulated_cost_mode_LO)
@@ -97,7 +98,7 @@ class Node(Node):
             if distance < min_distance :
                 min_distance = distance 
                 closest_sensor = un_sensor
-        print("closest_sensor",closest_sensor)
+        #print("closest_sensor",closest_sensor)
         return self.choose_next_sensor(closest_sensor)
         
 
@@ -129,7 +130,7 @@ class Node(Node):
             return reward
     
     def choose_next_sensor(self, sensor):
-        print("sensor",sensor)
+        #print("sensor",sensor)
         dist_next_to_base = calculate_distance(points[sensor],points["B"])
         dist_to_next = calculate_distance(points[self.sensor],points[sensor])
   
@@ -140,12 +141,12 @@ class Node(Node):
         #Gestion terminal => A MODIF Là je check une itération trop tard = Pas assez d'énergy pour retourner à la base 
 
         #print("terminal",terminal)
-        print(self.sensor) #On est bloqué dans B ! On évolu pas dans l'arbre ! 
+        #print(self.sensor) #On est bloqué dans B ! On évolu pas dans l'arbre ! 
 
-        print("test",self.accumulated_cost_mode_HI + wind_factor*coef_energy_no_wind*(dist_to_next+dist_next_to_base))
-        print("test",self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base))
+        #print("test",self.accumulated_cost_mode_HI + coef_energy_wind*(dist_to_next+dist_next_to_base))
+        #print("test",self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base))
         #A MODIF
-        if (self.accumulated_cost_mode_HI + wind_factor*coef_energy_no_wind*(dist_to_next+dist_next_to_base) > init_energy or self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base) > init_energy):      
+        if (self.accumulated_cost_mode_HI + coef_energy_wind*(dist_to_next+dist_next_to_base) > init_energy or self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base) > init_energy):      
             return Node(sensor = "B", parent = self, terminal = True)
         else :
             return Node(sensor = sensor, parent = self, terminal = False)
@@ -219,18 +220,29 @@ def do_drone_navigation():
 
 
         print(f"Capteurs visités : {visited_sensors}")
+        
+        if (is_HI_Mode):#Mode HI =>va que vers les capteurs HI du segment 
+            if(points[node.sensor]["c"] == True):
+                simulation.move_drone_to_sensor(node.sensor)
+        else : #Mode LO =>va que vers tous les capteurs du segment 
+            simulation.move_drone_to_sensor(node.sensor)
+
+
         real_energy_consumed = simulation.get_consumed_energy()
         dist = calculate_accumulated_distance_drone(node)
         print("energy_consumed_LO",node.accumulated_cost_mode_LO)
+        print("energy_consumed_HI",node.accumulated_cost_mode_HI)
         print("accumulated_dist",dist)
         print("real_energy_consumed",real_energy_consumed)
        
         if (real_energy_consumed > node.accumulated_cost_mode_LO):
             is_HI_Mode = True
         print("is_HI_Mode",is_HI_Mode)
-        simulation.move_drone_to_sensor(node.sensor)
+        
         energy_remaining = init_energy - real_energy_consumed
         print(f"Energy restante drône : {energy_remaining}")
+
+
         
         #simulation.move_drone_to_sensor(node.sensor)
         
@@ -239,14 +251,14 @@ def do_drone_navigation():
     opti_total_dist = calculate_accumulated_distance_drone(node)
     print(f"Distance totale parcourue par le drône (opti) : {opti_total_dist}")
     print(f"Final Reward : ",node.reward())
-    plot_capteurs_points(points, visited_sensors)
+    plot_capteurs_points(points, visited_sensors, is_HI_Mode)
     #return visited_sensors
 
 
 def new_Node():
     return Node(sensor = "B", parent = None, terminal = False)
 
-def plot_capteurs_points(points, visited_sensors):
+def plot_capteurs_points(points, visited_sensors, is_HI_Mode):
     # Tracer les points
     plt.figure(figsize=(10, 8))
     for name, coord in points.items():
@@ -278,7 +290,10 @@ def plot_capteurs_points(points, visited_sensors):
         # Tracer les lignes
         #print("x_coords :",x_coords)
         #print("y_coords :",y_coords)
-        plt.plot(x_coords, y_coords, color="black", linestyle="--", marker="o", label="Trajet du drone")
+        if (is_HI_Mode):
+            plt.plot(x_coords, y_coords, color="orange", linestyle="--", marker="o", label="Trajet du drone")
+        else :
+            plt.plot(x_coords, y_coords, color="black", linestyle="--", marker="o", label="Trajet du drone")
 
 
     # Configuration de l'affichage

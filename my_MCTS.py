@@ -60,7 +60,7 @@ class MCTS:
         if node in self.children:
             return  # already expanded
         self.children[node] = node.find_children()
-        print(f"Node {node.sensor} expanded. Number of children: {len(self.children[node])}.") #ok B is well expanded ! Have 20 children 
+        #print(f"Node {node.sensor} expanded. Number of children: {len(self.children[node])}.") #ok B is well expanded ! Have 20 children 
         
        
 
