@@ -37,7 +37,8 @@ non_critical_sensors = {key: value for key, value in points.items() if value.get
 init_energy = 80
 
 coef_energy_no_wind = 2 # energy = rapport_energy_dist * dist
-wind_factor = 2 #coef multiplicateur de l'énergy consommé lorsqu'il y a du vent 
+coef_energy_wind = 4
+
 reward_critical_sensors = len(non_critical_sensors) +1
 reward_non_critical_sensors = 1
 
