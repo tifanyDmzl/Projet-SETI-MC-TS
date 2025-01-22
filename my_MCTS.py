@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import math
-
+from config import *
 
 
 
@@ -15,19 +15,42 @@ class MCTS:
         self.exploration_weight = exploration_weight
 
     def choose(self, node):
-        "Choose the best successor of node. (Choose a move in the game)"
+        "Choose the best child in the list of children available for node"
+
+        """
+        Ex : 
+        node in self.children  # True
+        self.children[node] = [child1, child2, child3]
+
+        self.N[child1] = 10
+        self.Q[child1] = 50  # Score moyen : 50 / 10 = 5
+        self.N[child2] = 5
+        self.Q[child2] = 30  # Score moyen : 30 / 5 = 6
+        self.N[child3] = 0   # Non exploré, score = -inf
+
+        choose(node)  # Retourne node `child2` (score le plus élevé)
+        
+
+
+        key=score (facultatif) : max() utilise le résultat de la fonction score comme critère de comparaison pour return le node avec le plus grand score
+        arg1 : différents éléments à comparer (ici = les différents enfants de node)
+        arg2 : critère de comparaison (ici = choisit le node qui a le score le plus élevé (résultat de la fonction score))
+        """
+
         if node.is_terminal():
             raise RuntimeError(f"choose called on terminal node {node}")
 
+        #Si le noeud node n'est pas une clé dans le dico self.children 
         if node not in self.children:
             #return node.find_random_child()
             return node.find_closer_child()
+
 
         def score(n):
             if self.N[n] == 0:
                 return float("-inf")  # avoid unseen moves
             return self.Q[n] / self.N[n]  # average reward
-
+        print("node.sensor",node.sensor)
         return max(self.children[node], key=score)
 
     def do_rollout(self, node):
@@ -98,12 +121,15 @@ class MCTS:
         """
     def _simulate(self, node): #Pour mon drône (but minimiser la distance, reward = -distance => maximiser le reward)
         while True :
+        #for _ in range(simulation_depth):
             if node.is_terminal():
-                reward = node.reward()
-                #print("reward",reward)
-                return reward
+                break
             #node = node.find_random_child() #Condition plus smart que random ? Distance la plus proche ? 
             node = node.find_closer_child()
+
+        reward = node.reward()
+        #print("reward",reward)
+        return reward
 
 
     def _backpropagate(self, path, reward):

@@ -193,7 +193,7 @@ class DroneSimulation(QThread):
             )
 
     def move_drone_to_sensor(self, sensor_name):
-        # self.move_count += 1
+        self.move_count += 1
         # base_energy = 1
         # wind_factor = 2 if self.move_count in self.wind_moves else 0
 
