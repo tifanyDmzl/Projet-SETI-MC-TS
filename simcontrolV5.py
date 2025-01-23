@@ -66,6 +66,7 @@ class DroneSimulation(QThread):
         self.sensors = {}
         self.wind_icon_handle = None
         self.consumed_energy = 0
+        self.distance = 0
         self.previous_sensor = None
         self.initialize_simulation()
 
@@ -82,6 +83,9 @@ class DroneSimulation(QThread):
 
     def get_consumed_energy(self):
         return self.consumed_energy
+    
+    def get_real_distance(self):
+        return self.distance
 
     """def calculate_energy_consumption(self, base_energy, wind_factor):
         return base_energy * (1 + wind_factor)
@@ -213,7 +217,7 @@ class DroneSimulation(QThread):
             prev_point = self.points[self.previous_sensor]
 
         current_point = self.points[sensor_name]
-        distance = math.sqrt(
+        self.distance = math.sqrt(
             (current_point["x"] - prev_point["x"])**2 +
             (current_point["y"] - prev_point["y"])**2
         )
@@ -221,7 +225,7 @@ class DroneSimulation(QThread):
         #energy_consumed = self.calculate_energy_consumption(base_energy, wind_factor)
         
         
-        self.consumed_energy += coef_energy * distance
+        self.consumed_energy += coef_energy * self.distance
         self.energy -= self.consumed_energy
         self.energy_updated.emit(self.energy)
 

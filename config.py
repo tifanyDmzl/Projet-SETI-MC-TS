@@ -34,7 +34,7 @@ points = {
 critical_sensors = {key: value for key, value in points.items() if value.get("c") == True}
 non_critical_sensors = {key: value for key, value in points.items() if value.get("c") == False}
 
-init_energy = 150
+init_energy = 100
 
 coef_energy_no_wind = 2 # energy = rapport_energy_dist * dist
 #wind_factor = 2 #coef multiplicateur de l'énergy consommé lorsqu'il y a du vent 
@@ -53,5 +53,5 @@ simulation_depth = 4 #Profondeur de simulation : on simule les 4 prochains capte
 
 
 # Moves where wind is present
-wind_moves = [5,6]  # The 4th and 5th moves will have wind
-#wind_moves = []
+#wind_moves = [1,2,3]  # The 4th and 5th moves will have wind
+wind_moves = []

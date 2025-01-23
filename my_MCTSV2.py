@@ -14,7 +14,7 @@ class MCTS:
         self.children = dict()  # children of each node
         self.exploration_weight = exploration_weight
 
-    def choose(self, node, is_HI_Mode):
+    def choose(self, node):
         "Choose the best child in the list of children available for node"
 
         """
@@ -37,13 +37,13 @@ class MCTS:
         arg2 : critère de comparaison (ici = choisit le node qui a le score le plus élevé (résultat de la fonction score))
         """
 
-        if node.is_terminal():
-            raise RuntimeError(f"choose called on terminal node {node}")
+        #if node.is_terminal():
+        #   raise RuntimeError(f"choose called on terminal node {node}")
 
         #Si le noeud node n'est pas une clé dans le dico self.children 
         if node not in self.children:
             #return node.find_random_child()
-            return node.find_closer_child(is_HI_Mode)
+            return node.find_closer_child()
 
 
         def score(n):
@@ -53,13 +53,13 @@ class MCTS:
         print("node.sensor",node.sensor)
         return max(self.children[node], key=score)
 
-    def do_rollout(self, node, is_HI_Mode):
+    def do_rollout(self, node):
         "Make the tree one layer better. (Train for one iteration.)"
         "Do one iteration of the algo MCTS"
         path = self._select(node)
         leaf = path[-1]
-        self._expand(leaf, is_HI_Mode)
-        reward = self._simulate(leaf, is_HI_Mode)
+        self._expand(leaf)
+        reward = self._simulate(leaf)
         self._backpropagate(path, reward)
 
     def _select(self, node): #Convention : _method() doit être vue comme une méthode privée à la classe ! 
@@ -78,11 +78,11 @@ class MCTS:
                 return path
             node = self._uct_select(node)  # descend a layer deeper
 
-    def _expand(self, node, is_HI_Mode):
+    def _expand(self, node):
         "Update the `children` dict with the children of `node`"
         if node in self.children:
             return  # already expanded
-        self.children[node] = node.find_children(is_HI_Mode)
+        self.children[node] = node.find_children()
         #print(f"Node {node.sensor} expanded. Number of children: {len(self.children[node])}.") #ok B is well expanded ! Have 20 children 
         
        
@@ -119,13 +119,13 @@ class MCTS:
             return best_reward
 
         """
-    def _simulate(self, node, is_HI_Mode): #Pour mon drône (but minimiser la distance, reward = -distance => maximiser le reward)
+    def _simulate(self, node): #Pour mon drône (but minimiser la distance, reward = -distance => maximiser le reward)
         while True :
         #for _ in range(simulation_depth):
-            if node.is_terminal():
+            if (node.sensor == "B" and node.id != 0):
                 break
-            #node = node.find_random_child(is_HI_Mode) #Condition plus smart que random ? Distance la plus proche ? 
-            node = node.find_closer_child(is_HI_Mode)
+            #node = node.find_random_child() #Condition plus smart que random ? Distance la plus proche ? 
+            node = node.find_closer_child()
 
         reward = node.reward()
         #print("reward",reward)
@@ -173,11 +173,6 @@ class Node(ABC):
     def find_closer_child(self):
         "Random successor of this board state (for more efficient simulation)"
         return None
-
-    @abstractmethod
-    def is_terminal(self):
-        "Returns True if the node has no children"
-        return True
 
     @abstractmethod
     def reward(self):

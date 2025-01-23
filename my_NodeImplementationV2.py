@@ -1,6 +1,6 @@
 
 from random import choice
-from my_MCTS import MCTS, Node 
+from my_MCTSV2 import MCTS, Node 
 import math
 import matplotlib.pyplot as plt
 from config import *
@@ -13,19 +13,18 @@ class Node(Node):
     #Attributes at NODE level
     next_node_id = 0
 
-    def __init__(self, sensor, parent, terminal):
+    def __init__(self, sensor, parent):
        
         self.id = Node.next_node_id
         Node.next_node_id +=1
         self.sensor = sensor 
         self.parent = parent
-        self.terminal = terminal
         self.accumulated_cost_mode_LO = 0 
         self.accumulated_cost_mode_HI = 0 
         self.deleted = False
         self.compute_accumulated_cost()
         if (self.id <3):
-            print(f"Node Created: ID={self.id}, Sensor={self.sensor}, Parent={self.parent.sensor if self.parent else None}, Terminal={self.terminal}")
+            print(f"Node Created: ID={self.id}, Sensor={self.sensor}, Parent={self.parent.sensor if self.parent else None}")
 
     def compute_accumulated_cost(self) :
         if (self.parent == None) :
@@ -57,9 +56,9 @@ class Node(Node):
             print("accumulated_cost_mode_LO",self.id, " : ",self.sensor, " : ",self.accumulated_cost_mode_LO)
         """
 
-    def find_children(self, is_HI_Mode):
+    def find_children(self):
         # If we already visited all sensors return an empty list of children
-        if self.terminal : 
+        if (self.sensor == "B" and self.id != 0) : 
             return set()
         #Choose a next sensor which have not yet been visited (value = None) in the list of all possible children
         visited_sensors = set()
@@ -75,37 +74,24 @@ class Node(Node):
         #print("unvisited_sensors",unvisited_sensors)
         if (len(unvisited_sensors) != 0):
             return {
-                    self.choose_next_sensor(sensor, is_HI_Mode) for sensor in unvisited_sensors
+                    self.choose_next_sensor(sensor) for sensor in unvisited_sensors
             }
         else : #Gestion du cas où on a visité tous les capteurs 
             return {
-                    self.choose_next_sensor("B", is_HI_Mode) 
+                    self.choose_next_sensor("B") 
             }
 
     
-    def find_random_child(self, is_HI_Mode):
+    """def find_random_child(self):
         if self.terminal :
             return None
-        
-        visited_sensors = set()
-        node = self
-        while (node.parent != None):
-            visited_sensors.add(node.sensor)
-            node = node.parent
-
-        unvisited_sensors = [
-            sensor for sensor in points.keys() if sensor not in visited_sensors and sensor != "B"
-        ]
         #Utile dans MCTS heuristic (retourne aléatoirement le numéro d'un capteur qui n'a pas encore été visité !)
-        #empty_spots = [i for i, value in enumerate(self.tup) if value is None] 
+        empty_spots = [i for i, value in enumerate(self.tup) if value is None] 
         #print(empty_spots)
-        if (len(unvisited_sensors)!= 0):
-            return self.choose_next_sensor(choice(unvisited_sensors), is_HI_Mode)
-        else :
-            return self.choose_next_sensor("B", is_HI_Mode)
+        return self.choose_next_sensor(choice(empty_spots))"""
     
-    def find_closer_child(self, is_HI_Mode):
-        if self.terminal :
+    def find_closer_child(self):
+        if (self.sensor == "B" and self.id != 0) :
             return None
         visited_sensors = set()
         node = self
@@ -124,12 +110,10 @@ class Node(Node):
             if distance < min_distance :
                 min_distance = distance 
                 closest_sensor = un_sensor
-        return self.choose_next_sensor(closest_sensor, is_HI_Mode)
+        return self.choose_next_sensor(closest_sensor)
         
 
 
-    def is_terminal(self): 
-        return self.terminal
 
     def reward(self):
         """if not self.terminal:
@@ -157,7 +141,7 @@ class Node(Node):
         #reward -= (1/total_nber_sensors_ET_poids)*(total_dist/max_dist)
         return reward
     
-    def choose_next_sensor(self, sensor, is_HI_Mode):
+    def choose_next_sensor(self, sensor):
         #print("sensor",sensor)
 
   
@@ -177,17 +161,19 @@ class Node(Node):
 
 
         #Le prochain capteur à visiter : sensor => Check s'il reste assez d'énergie pour ajouter la visite de ce capteur ou non !? 
-        dist_next_to_base = calculate_distance(points[sensor],points["B"])
+        """dist_next_to_base = calculate_distance(points[sensor],points["B"])
         dist_to_next = calculate_distance(points[self.sensor],points[sensor])
         
         #Gestion du cas où on a visité tous les capteurs 
         if (sensor == "B"): 
             return Node(sensor = sensor, parent = self, terminal = True)
         #Gestion du cas où on est à cours d'énergie (noeud terminal)
-        elif ((self.accumulated_cost_mode_HI + coef_energy_wind*(dist_to_next+dist_next_to_base) > init_energy and is_HI_Mode == True) or (self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base) > init_energy and is_HI_Mode == False)):      
+        elif (self.accumulated_cost_mode_HI + coef_energy_wind*(dist_to_next+dist_next_to_base) > init_energy or self.accumulated_cost_mode_LO + coef_energy_no_wind*(dist_next_to_base+dist_next_to_base) > init_energy):      
             return Node(sensor = "B", parent = self, terminal = True)
         else :
             return Node(sensor = sensor, parent = self, terminal = False)
+        """
+        return Node(sensor = sensor, parent = self)
 
 
 
@@ -247,8 +233,7 @@ def do_drone_navigation():
     visited_sensors.append(node.sensor)
     real_visited_sensors.append(node.sensor)
     while True :
-        if node.terminal : 
-           break
+
         """for _ in range(1000): #ATTENTION : Itère assez de chemins !! Sinon c'est juste une solution trop random !!!!!!
             tree.do_rollout(environment) #Replanning tous les 1 choix de capteur ? Sûrement très précis mais utilise beaucoup de ressources CPU pour recalculer à chaque coup ! 
             #Essayer replanning tous les 4 capteurs !? """
@@ -256,14 +241,27 @@ def do_drone_navigation():
         # Replanning uniquement tous les 4 capteurs
         if sensors_since_last_replanning >= 3 or node.parent == None : #Réflexion tous les 4 capteurs choisi
             for _ in range(nber_of_rollout_iterations):  
-                tree.do_rollout(node, is_HI_Mode) #Algo = Réflexion = Mise à jour des poids de l'arbre 
+                tree.do_rollout(node) #Algo = Réflexion = Mise à jour des poids de l'arbre 
             sensors_since_last_replanning = 0
             print("Do algo")
 
 
+
         
         #print("last_node",node.id, node.sensor, node.terminal, node.parent)
-        node = tree.choose(node, is_HI_Mode) #Action = choix capteur suivant => Change de noeud courrant pour aller au suivant 
+
+        #Définie le noeud suivant potentiel
+        node = tree.choose(node) #Action = choix capteur suivant => Change de noeud courrant pour aller au suivant 
+
+        #Vérif que l'ajout de ce noeud ne provoquera pas un dépassement de budget => Sinon : break (ajoute pas ce dernier noeud à la trajectoire du drone)
+        if (node.sensor == "B" and node.id != 0) or (node.accumulated_cost_mode_HI > init_energy and is_HI_Mode == True) or (node.accumulated_cost_mode_LO > init_energy and is_HI_Mode == False): 
+           #Ajouter le déplacement vers B je pense 
+            print("node.sensor_terminal",node.sensor)
+            print("energy_consumed_LO_terminal",node.accumulated_cost_mode_LO)
+            print("energy_consumed_HI_terminal",node.accumulated_cost_mode_HI)
+            break
+
+        #Si on est sûr qu'il n'y aura pas de dépassement de budegt ALORS on se déplace vers le prochain capteur 
         visited_sensors.append(node.sensor)
         
         sensors_since_last_replanning += 1
@@ -337,7 +335,7 @@ def do_drone_navigation():
 
 
 def new_Node():
-    return Node(sensor = "B", parent = None, terminal = False)
+    return Node(sensor = "B", parent = None)
 
 def plot_capteurs_points(points, visited_sensors, real_visited_sensors, is_HI_Mode):
     # Tracer les points
